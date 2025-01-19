@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  {% block scripts %}
+  {% endblock %}
+<style>
+
+ul {
+  columns: 3;
+  -webkit-columns: 3;
+  -moz-columns: 3;
+  vertical-align:text-top;
+}
+
+li {
+    break-inside:avoid;
+    -webkit-column-break-inside: avoid; 
+}
+
+</style>
+</head>
+<body>
+
+<h1>{% block title %}{% endblock %}</h1>
+
+<div>
+{% block content %}
+{% endblock %}
+</div>
+
+</body>
+</html>
