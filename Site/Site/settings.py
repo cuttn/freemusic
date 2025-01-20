@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-2yee^flf$it+v#pbeyhgvfw%#5!#__q4*&8url1j29om=!m&6-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["free-music.onrender.com", "127.0.0.1"]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
