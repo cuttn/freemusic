@@ -38,7 +38,7 @@ def login(request):
 
 # Create your views here.
 def landing(request):
-    spauth = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], redirect_uri="http://127.0.0.1:8000/App/spotify_callback", scope="playlist-read-private user-top-read user-library-read")
+    spauth = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], scope="playlist-read-private user-top-read user-library-read")
     destination = spauth.get_authorize_url()
     return HttpResponseRedirect(destination)
 # def landing(request):
@@ -57,7 +57,7 @@ def tokenn(request):
     fullurl = request.get_full_path()
     plasentaCode = parsee.urlparse(fullurl)
     realCode = parsee.parse_qs(plasentaCode.query)['code'][0]
-    spath = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], redirect_uri="http://127.0.0.1:8000/App/spotify_callback")
+    spath = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"])
     token = spath.get_access_token(realCode, as_dict=False, check_cache=False)
     request.session["TOKEN"] = token
     if(realCode != ""):
