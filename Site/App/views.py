@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse, FileResponse
 from django.template import loader
+from .forms import spotifyuser
 import spotipy
 from spotipy import SpotifyOAuth
 import os
@@ -24,9 +25,20 @@ import zipfile
 #         albumids.append(track["track"]["album"]["id"])
 #     return sp.albums(albumids)
 
+def login(request):
+    if request.method == 'POST':
+        form = spotifyuser(request.POST)
+        if form.is_valid():
+            request.session["TOKEN"] = {"id" : form.cleaned_data["sp_dc"], "secret" : form.cleaned_data["sp_key"]}
+            return HttpResponseRedirect("token")
+    else:
+        form = spotifyuser()
+    
+    return render(request, "getspinfo.html", {"form" : form})
+
 # Create your views here.
-def landing(request, id=os.getenv("SPOTIPY_CLIENT_ID"), secret=os.getenv("SPOTIPY_CLIENT_SECRET")):
-    spauth = SpotifyOAuth(client_id=id, client_secret=secret, redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"), scope="playlist-read-private user-top-read user-library-read")
+def landing(request):
+    spauth = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], redirect_uri="http://127.0.0.1:8000/App/spotify_callback", scope="playlist-read-private user-top-read user-library-read")
     destination = spauth.get_authorize_url()
     return HttpResponseRedirect(destination)
 # def landing(request):
@@ -45,7 +57,7 @@ def tokenn(request):
     fullurl = request.get_full_path()
     plasentaCode = parsee.urlparse(fullurl)
     realCode = parsee.parse_qs(plasentaCode.query)['code'][0]
-    spath = SpotifyOAuth()
+    spath = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], redirect_uri="http://127.0.0.1:8000/App/spotify_callback")
     token = spath.get_access_token(realCode, as_dict=False, check_cache=False)
     request.session["TOKEN"] = token
     if(realCode != ""):
@@ -131,7 +143,11 @@ def download(request, reqType, ids):
             apicall = sp.artist_top_tracks
     musicshit = MusicContainer.objects.filter(id__in=list(set(ids.split("-")[1:-1]))).values_list("spotifyid")
     items = []
-    name = str(time.time_ns())
+    if "count" not in request.session:
+        request.session["count"] = 0
+    else:
+        request.session["count"] += 1
+    name = "music" + str(request.session["count"])
     for i in list(musicshit):
         x = apicall(i[0])
         if reqType[:4] == "trac":
@@ -185,7 +201,7 @@ def download(request, reqType, ids):
 
     zippy = open(f'Z{name}.zip', 'rb')
     response = HttpResponse(zippy, content_type='music/force-download')
-    response['Content-Disposition'] = f'attachment; filename="FreeMusic-{reqType}.zip"'
+    response['Content-Disposition'] = f'attachment; filename="{reqType}.zip"'
     try:
         return response
     finally:
