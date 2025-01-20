@@ -147,7 +147,7 @@ def download(request, reqType, ids):
         request.session["count"] = 0
     else:
         request.session["count"] += 1
-    name = "music" + str(request.session["count"])
+    name = "music"
     for i in list(musicshit):
         x = apicall(i[0])
         if reqType[:4] == "trac":
