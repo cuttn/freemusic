@@ -251,6 +251,7 @@ async def download(request, reqType, ids):
             "yt-dlp",
             "-o", output_path,
             "-x",
+            "--cookies", "cookies.txt",
             "--audio-format", "mp3",
             "--audio-quality", "1",
             f"ytsearch:{item['search']}(audio)"
