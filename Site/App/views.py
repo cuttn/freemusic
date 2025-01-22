@@ -2,28 +2,103 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse, FileResponse
 from django.template import loader
 from .forms import spotifyuser
+from asgiref.sync import sync_to_async
+
+import os
+import asyncio
+import shutil
+import urllib.parse as parsee
+from urllib.request import urlopen
+from pathlib import Path
+from functools import partial
+from asyncio.subprocess import create_subprocess_exec
+
 import spotipy
 from spotipy import SpotifyOAuth
-import os
-import urllib.parse as parsee
 import eyed3
-from urllib.request import urlopen
-import time
-from App.models import MusicContainer
-import shutil
-import subprocess
 import zipfile
 
-# def topalbums(limit=20, time_range="medium_term", offset=0):
-#     token = []
-#     with open("tokeninfo.json", "r") as j: 
-#         token = json.load(j)
-#     sp = spotipy.Spotify(auth=token[0])
-#     tracks = sp.current_user_top_tracks(limit, offset, time_range)
-#     albumids = []
-#     for track in tracks["items"]:
-#         albumids.append(track["track"]["album"]["id"])
-#     return sp.albums(albumids)
+from App.models import MusicContainer
+
+# Wrap synchronous spotipy calls
+class AsyncSpotify:
+    def __init__(self, auth_token):
+        self.sp = spotipy.Spotify(auth=auth_token)
+        # Base async methods
+        self.current_user_playlists = sync_to_async(self.sp.current_user_playlists)
+        self.current_user_saved_albums = sync_to_async(self.sp.current_user_saved_albums)
+        self.current_user_saved_tracks = sync_to_async(self.sp.current_user_saved_tracks)
+        self.current_user_top_artists = sync_to_async(self.sp.current_user_top_artists)
+        self.current_user_top_tracks = sync_to_async(self.sp.current_user_top_tracks)
+        self.get_playlist_tracks = sync_to_async(self.sp.playlist_tracks)
+        self.current_user_recently_played = sync_to_async(self.sp.current_user_recently_played)
+        self.async_track = sync_to_async(self.sp.track)
+        self.async_album = sync_to_async(self.sp.album)
+        self.async_artist = sync_to_async(self.sp.artist)
+        self.async_artist_top_tracks = sync_to_async(self.sp.artist_top_tracks)
+    async def get_all_playlists(self):
+        items = []
+        while True:
+            result = await self.current_user_playlists(offset=len(items))
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_all_saved_albums(self):
+        items = []
+        while True:
+            result = await self.current_user_saved_albums(offset=len(items))
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_all_saved_tracks(self):
+        items = []
+        while True:
+            result = await self.current_user_saved_tracks(offset=len(items))
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_all_top_artists(self, time_range='medium_term'):
+        items = []
+        while True:
+            result = await self.current_user_top_artists(limit=50, offset=len(items), time_range=time_range)
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_all_top_tracks(self, time_range='medium_term'):
+        items = []
+        while True:
+            result = await self.current_user_top_tracks(limit=50, offset=len(items), time_range=time_range)
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_playlist_tracks_paginated(self, playlist_id):
+        items = []
+        while True:
+            result = await self.get_playlist_tracks(playlist_id, offset=len(items))
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+
+    async def get_all_recently_played(self):
+        items = []
+        while True:
+            result = await self.current_user_recently_played(limit=50, after=len(items))
+            if not result['items']:
+                break
+            items.extend(result['items'])
+        return items
+    
 
 def login(request):
     if request.method == 'POST':
@@ -67,143 +142,170 @@ def home(request):
     homepage = loader.get_template("home.html")
     return HttpResponse(homepage.render())
 
-def browser(request, reqType, selected):
-    sp = spotipy.Spotify(auth=request.session["TOKEN"])
+async def browser(request, reqType):
+    apicaller = AsyncSpotify(auth_token=request.session["TOKEN"])
     apicall = print
     match reqType:
         case "playlist-Lib":
-            apicall = sp.current_user_playlists
+            apicall = apicaller.get_all_playlists
         case "album-Lib":
-            apicall = sp.current_user_saved_albums
+            apicall = apicaller.get_all_saved_albums
         case "track-Lib":
-            apicall = sp.current_user_saved_tracks
+            apicall = apicaller.get_all_saved_tracks
         case "artist-Top":
-            apicall = sp.current_user_top_artists
+            apicall = apicaller.get_all_top_artists
         case "track-Top":
-            apicall = sp.current_user_top_tracks
+            apicall = apicaller.get_all_top_tracks
         # case "album-Top":
         #     apicall = topalbums
         case "track-Rec":
-            apicall = sp.current_user_recently_played
+            apicall = apicaller.get_all_recently_played
     
-    musicshit = MusicContainer.objects.none().values()
-
-    items = []
-    if apicall != sp.current_user_top_tracks:
-        while len(items)%20 == 0:
-            newshit = apicall(limit=20, offset=len(items))
-            if(len(newshit['items']) != 0):
-                items.extend(newshit['items'])
-            else:
-                break
-    else:
-        while len(items)<100:
-            newshit = apicall(limit=20, offset=len(items))
-            if(len(newshit['items']) != 0):
-                items.extend(newshit['items'])
-            else:
-                break
+    musicshit = []
+    
+    items = await apicall()
     
     for item in items:
-        exists = False
         try:
-            exists = MusicContainer.objects.filter(spotifyid=item["id"]).exists()
-            if not exists:
-                music = MusicContainer(spotifyid=item["id"], title=item["name"], type=reqType[:-5])
-                music.save()
-            musicshit = musicshit | MusicContainer.objects.filter(spotifyid=item["id"]).values()
+            musicshit.append({
+                'spotifyid': item["id"],
+                'title': item["name"],
+                'type': reqType[:-5]
+            })
         except:
-            exists = MusicContainer.objects.filter(spotifyid=item[reqType[:-4]]["id"]).exists()
-            if not exists:
-                music = MusicContainer(spotifyid=item[reqType[:-4]]["id"], title=item[reqType[:-4]]["name"], type=reqType[:-4])
-                music.save()
-            musicshit = musicshit | MusicContainer.objects.filter(spotifyid=item[reqType[:-4]]["id"]).values()
+            musicshit.append({
+                'spotifyid': item[reqType[:-4]]["id"],
+                'title': item[reqType[:-4]]["name"],
+                'type': reqType[:-4]
+            })
 
     context = {
         "musicshit" : musicshit,
-        "selected" : [eval(i) for i in selected.split("-")[1:-1]],
-        "selectedstr" : selected,
         "type" : reqType[:4]
     }
     
     browserr = loader.get_template("browser.html")
     return HttpResponse(browserr.render(context, request))
-    
-def download(request, reqType, ids):
-    sp = spotipy.Spotify(auth=request.session["TOKEN"])
-    apicall = range
-    match reqType[:4]:
-        case "play":
-            apicall = sp.playlist_tracks
-        case "albu":
-            apicall = sp.album
-        case "trac":
-            apicall = sp.track
-        case "arti":
-            apicall = sp.artist_top_tracks
-    musicshit = MusicContainer.objects.filter(id__in=list(set(ids.split("-")[1:-1]))).values_list("spotifyid")
-    items = []
-    if "count" not in request.session:
-        request.session["count"] = 0
-    else:
-        request.session["count"] += 1
+
+async def download(request, reqType, ids):
+    sp = AsyncSpotify(request.session["TOKEN"])
+
     name = "music"
-    for i in list(musicshit):
-        x = apicall(i[0])
-        if reqType[:4] == "trac":
-            meta = {"search" : x["artists"][0]["name"] + " " + x["name"], "name" : x["name"],"album" : x["album"]["name"], "image" : x["album"]["images"][0]["url"] ,"artist" : x["artists"][0]["name"]}
-            items.append(meta)
-        elif reqType[:4] == "play":
-            while len(items)%100 == 0:
-                x = apicall(i[0], offset=len(items))
-                if(len(x['items']) != 0):
-                    for track in x["items"]:
-                        try:
-                            track = track["track"]
-                            meta = {"search" : track["artists"][0]["name"] + " " + track["name"], "name" : track["name"],"album" : track["album"]["name"], "image" : track["album"]["images"][0]["url"] ,"artist" : track["artists"][0]["name"]}
-                            items.append(meta)
-                        except:
-                            pass
-                else:
-                    break
-        elif reqType[:4] == "albu":
-            albname = x["name"]
-            cover = x["images"][0]["url"]
-            artist = x["artists"][0]["name"]
-            for track in x["tracks"]["items"]:
-                meta = {"search" : artist + " " + track["name"], "name" : track["name"],"album" : albname, "image" : cover ,"artist" : artist}
-                items.append(meta)
-        elif reqType[:4] == "arti":
-            for song in x["tracks"]:
-                meta = {"search" : song["artists"][0]["name"] + " " + song["name"], "name" : song["name"],"album" : song["album"]["name"], "image" : song["album"]["images"][0]["url"] ,"artist" : song["artists"][0]["name"]}
-                items.append(meta)
-
-    for item in items:
+    os.makedirs(name, exist_ok=True)
+    
+    # Get track metadata based on type
+    async def get_metadata(spotify_id):
+        items = []
+        if reqType.startswith("trac"):
+            x = await sp.async_track(spotify_id)
+            items.append({
+                "search": f"{x['artists'][0]['name']} {x['name']}",
+                "name": x['name'],
+                "album": x['album']['name'],
+                "image": x['album']['images'][0]['url'],
+                "artist": x['artists'][0]['name']
+            })
+        elif reqType.startswith("play"):
+            tracks = await sp.get_playlist_tracks_paginated(spotify_id)
+            for track in tracks:
+                try:
+                    track = track["track"]
+                    items.append({
+                        "search": f"{track['artists'][0]['name']} {track['name']}",
+                        "name": track['name'],
+                        "album": track['album']['name'],
+                        "image": track['album']['images'][0]['url'],
+                        "artist": track['artists'][0]['name']
+                    })
+                except:
+                    pass
+        elif reqType.startswith("albu"):
+            album = await sp.async_album(spotify_id)
+            for track in album['tracks']['items']:
+                items.append({
+                    "search": f"{track['artists'][0]['name']} {track['name']}",
+                    "name": track['name'],
+                    "album": album['name'],
+                    "image": album['images'][0]['url'],
+                    "artist": track['artists'][0]['name']
+                })
+        elif reqType.startswith("arti"):
+            tracks = await sp.async_artist_top_tracks(spotify_id)
+            for track in tracks['tracks']:
+                items.append({
+                    "search": f"{track['artists'][0]['name']} {track['name']}",
+                    "name": track['name'],
+                    "album": track['album']['name'],
+                    "image": track['album']['images'][0]['url'],
+                    "artist": track['artists'][0]['name']
+                })
+        return items
+    
+    items = await get_metadata(ids)
+    async def download_and_tag_song(item):
         safename = "".join(c for c in item['name'] if c.isalpha() or c.isdigit() or c==' ').rstrip()
-        subprocess.run(["yt-dlp", "-o", f"{name}/{safename}.mp3", "-x", "--audio-format", "mp3", "--audio-quality", "1", f"ytsearch:{item['search']}(audio)"])
-        try:
-            mySong = eyed3.load(f"{name}/{safename}.mp3")
-            mySong.initTag()
-            imagedata = urlopen(item["image"]).read()
-            mySong.tag.images.set(3, imagedata , "image/jpeg" ,u"")
-            mySong.tag.artist = item["artist"]
-            mySong.tag.album = item["album"]
-            mySong.tag.title = item["name"]
-            mySong.tag.save(f"{name}/{safename}.mp3")
-        except:
-            pass
-
-    with zipfile.ZipFile(f'Z{name}.zip', 'w', zipfile.ZIP_DEFLATED) as zip_object:
-        # Traverse all files in directory
-        for filename in os.listdir(f"{name}/"):
-            # Add files to zip file
-            zip_object.write(f"{name}/{filename}", f"Z{name}/{filename}")
-
-    zippy = open(f'Z{name}.zip', 'rb')
-    response = HttpResponse(zippy, content_type='music/force-download')
-    response['Content-Disposition'] = f'attachment; filename="{reqType}.zip"'
-    try:
-        return response
-    finally:
+        output_path = f"{name}/{safename}.mp3"
+        
+        # Download with yt-dlp
+        cmd = [
+            "yt-dlp",
+            "-o", output_path,
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", "1",
+            f"ytsearch:{item['search']}(audio)"
+        ]
+        
+        process = await create_subprocess_exec(*cmd)
+        await process.communicate()
+        
+        # Tag the file (synchronous operation wrapped in sync_to_async)
+        @sync_to_async
+        def tag_file():
+            try:
+                mySong = eyed3.load(output_path)
+                mySong.initTag()
+                imagedata = urlopen(item["image"]).read()
+                mySong.tag.images.set(3, imagedata, "image/jpeg", u"")
+                mySong.tag.artist = item["artist"]
+                mySong.tag.album = item["album"]
+                mySong.tag.title = item["name"]
+                mySong.tag.save(output_path)
+            except:
+                pass
+        
+        await tag_file()
+    
+    # Download and tag songs concurrently (with a limit to avoid overwhelming the system)
+    chunk_size = 3  # Adjust based on your system's capabilities
+    for i in range(0, len(items), chunk_size):
+        chunk = items[i:i + chunk_size]
+        await asyncio.gather(*[download_and_tag_song(item) for item in chunk])
+    
+    # Create zip file (synchronous operation wrapped in sync_to_async)
+    @sync_to_async
+    def create_zip():
+        with zipfile.ZipFile(f'Z{name}.zip', 'w', zipfile.ZIP_DEFLATED) as zip_object:
+            for filename in os.listdir(f"{name}/"):
+                if filename.endswith("webm"):
+                    filename = filename[:-4] + "mp3"
+                zip_object.write(f"{name}/{filename}", f"Z{name}/{filename}")
+    
+    await create_zip()
+    
+    # Return response and cleanup
+    response = FileResponse(
+        open(f'Z{name}.zip', 'rb'),
+        content_type='application/zip',
+        as_attachment=True,
+        filename=f"{reqType}.zip"
+    )
+    
+    # Cleanup in background
+    async def cleanup():
         shutil.rmtree(f"{name}")
         os.remove(f"Z{name}.zip")
+    
+    asyncio.create_task(cleanup())
+    
+    return response

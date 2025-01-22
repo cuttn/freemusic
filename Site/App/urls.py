@@ -6,6 +6,6 @@ urlpatterns = [
     path('token', views.landing, name="redirect"),
     path('App/spotify_callback', views.tokenn, name="getdatoken"),
     path('home/', views.home, name="homepage"),    
-    path('browser/<str:reqType>/<str:selected>', views.browser, name="browser"),
-    path('download/<str:reqType>/<str:ids>', views.download, name="magicshit"),
+    path('download/<str:reqType>/<str:ids>', views.download, name='download'),
+    path('browser/<str:reqType>', views.browser, name="browser"),
 ]

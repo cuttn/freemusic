@@ -5,17 +5,11 @@
 
 {% block title %} {{ title }} {% endblock %}
 {% block content %}
-<a href = "/download/{{type}}/{{selectedstr}}" target=”_blank”>download selected *not recommended for albums/playlists as parrallel downloads are faster</a><br><br>
 <ul>
 {% for i in musicshit%}
     <li>
-            {% if i.id in selected %}
-                <p style="color: rgb(204, 0, 211);">{{i.title}}</p>
-            {% else %}
-                <p style="color: rgb(0, 0, 0);">{{i.title}}</p>
-            {% endif %}
-            <a href="/download/{{i.type}}/-{{i.id}}-" target=”_{{i.title}}”>download</a>
-            <a href="{{ request.path }}{{i.id}}-">select</a>
+            <p style="color: rgb(0, 0, 0);">{{i.title}}</p>
+            <a href="/download/{{i.type}}/{{i.spotifyid}}" target=”_{{i.title}}”>download</a>
     </li>
 {% endfor %}
 </ul>
