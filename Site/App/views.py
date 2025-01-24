@@ -193,23 +193,46 @@ async def download(request, reqType, ids):
     name = "music"
     os.makedirs(name, exist_ok=True)
     
+    try:
     # Get track metadata based on type
-    async def get_metadata(spotify_id):
-        items = []
-        if reqType.startswith("trac"):
-            x = await sp.async_track(spotify_id)
-            items.append({
-                "search": f"{x['artists'][0]['name']} {x['name']}",
-                "name": x['name'],
-                "album": x['album']['name'],
-                "image": x['album']['images'][0]['url'],
-                "artist": x['artists'][0]['name']
-            })
-        elif reqType.startswith("play"):
-            tracks = await sp.get_playlist_tracks_paginated(spotify_id)
-            for track in tracks:
-                try:
-                    track = track["track"]
+        async def get_metadata(spotify_id):
+            items = []
+            if reqType.startswith("trac"):
+                x = await sp.async_track(spotify_id)
+                items.append({
+                    "search": f"{x['artists'][0]['name']} {x['name']}",
+                    "name": x['name'],
+                    "album": x['album']['name'],
+                    "image": x['album']['images'][0]['url'],
+                    "artist": x['artists'][0]['name']
+                })
+            elif reqType.startswith("play"):
+                tracks = await sp.get_playlist_tracks_paginated(spotify_id)
+                for track in tracks:
+                    try:
+                        track = track["track"]
+                        items.append({
+                            "search": f"{track['artists'][0]['name']} {track['name']}",
+                            "name": track['name'],
+                            "album": track['album']['name'],
+                            "image": track['album']['images'][0]['url'],
+                            "artist": track['artists'][0]['name']
+                        })
+                    except:
+                        pass
+            elif reqType.startswith("albu"):
+                album = await sp.async_album(spotify_id)
+                for track in album['tracks']['items']:
+                    items.append({
+                        "search": f"{track['artists'][0]['name']} {track['name']}",
+                        "name": track['name'],
+                        "album": album['name'],
+                        "image": album['images'][0]['url'],
+                        "artist": track['artists'][0]['name']
+                    })
+            elif reqType.startswith("arti"):
+                tracks = await sp.async_artist_top_tracks(spotify_id)
+                for track in tracks['tracks']:
                     items.append({
                         "search": f"{track['artists'][0]['name']} {track['name']}",
                         "name": track['name'],
@@ -217,96 +240,73 @@ async def download(request, reqType, ids):
                         "image": track['album']['images'][0]['url'],
                         "artist": track['artists'][0]['name']
                     })
+            return items
+        
+        items = await get_metadata(ids)
+        async def download_and_tag_song(item):
+            safename = "".join(c for c in item['name'] if c.isalpha() or c.isdigit() or c==' ').rstrip()
+            output_path = f"{name}/{safename}.mp3"
+            
+            # Download with yt-dlp
+            cmd = [
+                "yt-dlp",
+                "-o", output_path,
+                "-x",
+                "--cookies", "cookies.txt",
+                "--audio-format", "mp3",
+                "--audio-quality", "1",
+                f"ytsearch:{item['search']}(audio)"
+            ]
+            
+            process = await create_subprocess_exec(*cmd)
+            await process.communicate()
+            
+            # Tag the file (synchronous operation wrapped in sync_to_async)
+            @sync_to_async
+            def tag_file():
+                try:
+                    mySong = eyed3.load(output_path)
+                    mySong.initTag()
+                    imagedata = urlopen(item["image"]).read()
+                    mySong.tag.images.set(3, imagedata, "image/jpeg", u"")
+                    mySong.tag.artist = item["artist"]
+                    mySong.tag.album = item["album"]
+                    mySong.tag.title = item["name"]
+                    mySong.tag.save(output_path)
                 except:
                     pass
-        elif reqType.startswith("albu"):
-            album = await sp.async_album(spotify_id)
-            for track in album['tracks']['items']:
-                items.append({
-                    "search": f"{track['artists'][0]['name']} {track['name']}",
-                    "name": track['name'],
-                    "album": album['name'],
-                    "image": album['images'][0]['url'],
-                    "artist": track['artists'][0]['name']
-                })
-        elif reqType.startswith("arti"):
-            tracks = await sp.async_artist_top_tracks(spotify_id)
-            for track in tracks['tracks']:
-                items.append({
-                    "search": f"{track['artists'][0]['name']} {track['name']}",
-                    "name": track['name'],
-                    "album": track['album']['name'],
-                    "image": track['album']['images'][0]['url'],
-                    "artist": track['artists'][0]['name']
-                })
-        return items
-    
-    items = await get_metadata(ids)
-    async def download_and_tag_song(item):
-        safename = "".join(c for c in item['name'] if c.isalpha() or c.isdigit() or c==' ').rstrip()
-        output_path = f"{name}/{safename}.mp3"
+            
+            await tag_file()
         
-        # Download with yt-dlp
-        cmd = [
-            "yt-dlp",
-            "-o", output_path,
-            "-x",
-            "--cookies", "cookies.txt",
-            "--audio-format", "mp3",
-            "--audio-quality", "1",
-            f"ytsearch:{item['search']}(audio)"
-        ]
+        # Download and tag songs concurrently (with a limit to avoid overwhelming the system)
+        chunk_size = 3  # Adjust based on your system's capabilities
+        for i in range(0, len(items), chunk_size):
+            chunk = items[i:i + chunk_size]
+            await asyncio.gather(*[download_and_tag_song(item) for item in chunk])
         
-        process = await create_subprocess_exec(*cmd)
-        await process.communicate()
-        
-        # Tag the file (synchronous operation wrapped in sync_to_async)
+        # Create zip file (synchronous operation wrapped in sync_to_async)
         @sync_to_async
-        def tag_file():
-            try:
-                mySong = eyed3.load(output_path)
-                mySong.initTag()
-                imagedata = urlopen(item["image"]).read()
-                mySong.tag.images.set(3, imagedata, "image/jpeg", u"")
-                mySong.tag.artist = item["artist"]
-                mySong.tag.album = item["album"]
-                mySong.tag.title = item["name"]
-                mySong.tag.save(output_path)
-            except:
-                pass
+        def create_zip():
+            with zipfile.ZipFile(f"Z{name}.zip", 'w', zipfile.ZIP_DEFLATED) as zip_object:
+                for filename in os.listdir(f"{name}/"):
+                    if filename.endswith("webm"):
+                        filename = filename[:-4] + "mp3"
+                    zip_object.write(f"{name}/{filename}", f"Z{name}/{filename}")
         
-        await tag_file()
+        await create_zip()
+        
+        # Return response with guaranteed cleanup
+        return FileResponse(
+            open(f"Z{name}.zip", 'rb'),
+            content_type='application/zip',
+            as_attachment=True,
+            filename=f"{reqType}.zip"
+        )
     
-    # Download and tag songs concurrently (with a limit to avoid overwhelming the system)
-    chunk_size = 3  # Adjust based on your system's capabilities
-    for i in range(0, len(items), chunk_size):
-        chunk = items[i:i + chunk_size]
-        await asyncio.gather(*[download_and_tag_song(item) for item in chunk])
-    
-    # Create zip file (synchronous operation wrapped in sync_to_async)
-    @sync_to_async
-    def create_zip():
-        with zipfile.ZipFile(f'Z{name}.zip', 'w', zipfile.ZIP_DEFLATED) as zip_object:
-            for filename in os.listdir(f"{name}/"):
-                if filename.endswith("webm"):
-                    filename = filename[:-4] + "mp3"
-                zip_object.write(f"{name}/{filename}", f"Z{name}/{filename}")
-    
-    await create_zip()
-    
-    # Return response and cleanup
-    response = FileResponse(
-        open(f'Z{name}.zip', 'rb'),
-        content_type='application/zip',
-        as_attachment=True,
-        filename=f"{reqType}.zip"
-    )
-    
-    # Cleanup in background
-    async def cleanup():
-        shutil.rmtree(f"{name}")
-        os.remove(f"Z{name}.zip")
-    
-    asyncio.create_task(cleanup())
-    
-    return response
+    finally:
+        # Cleanup files regardless of success or failure
+        try:
+            shutil.rmtree(name)
+            os.remove(f"Z{name}.zip")
+        except:
+            pass
