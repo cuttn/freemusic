@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  js-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+    ports:
+      - "4416:4416"
+    volumes:
+      - .:/app
+    working_dir: /bgutil-ytdlp-pot-provider/server
+    command: ["node", "build/main.js", "--port", "4416"]
+
+  python-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    ports:
+      - "8000:8000"
+    environment:
+      SPOTIPY_REDIRECT_URI: "http://localhost:8000/App/spotify_callback"
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["python", "Site/manage.py", "runserver", "0.0.0.0:8000"]

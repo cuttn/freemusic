@@ -1,0 +1,23 @@
+# Use Python as the base image
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y gcc ffmpeg && apt-get clean
+
+# Set work directory
+WORKDIR /app
+
+# Copy Python dependencies file
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code
+COPY . .
+
+# Expose the Python service port
+EXPOSE 8000
+
+# Start the Django server
+CMD ["python", "Site/manage.py", "runserver", "127.0.0.1:8000"]
