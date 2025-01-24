@@ -304,8 +304,12 @@ async def download(request, reqType, ids):
     
     # Cleanup in background
     async def cleanup():
-        shutil.rmtree(f"{name}")
-        os.remove(f"Z{name}.zip")
+        await asyncio.sleep(5)
+        try:
+            shutil.rmtree(f"{name}")
+            os.remove(f"Z{name}.zip")
+        except:
+            pass
     
     asyncio.create_task(cleanup())
     

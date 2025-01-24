@@ -11,3 +11,4 @@ pycache
 *.pyc
 *.sqlite3
 music
+__pycache__
