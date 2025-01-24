@@ -252,7 +252,7 @@ async def download(request, reqType, ids):
                 "yt-dlp",
                 "-o", output_path,
                 "-x",
-                "--extractor-args", "youtube:getpot_bgutil_baseurl=http://104.131.189.224:4416",
+                "--extractor-args", "youtube:getpot_bgutil_baseurl=http://0.0.0.0:4416",
                 "--audio-format", "mp3",
                 "--audio-quality", "1",
                 f"ytsearch:{item['search']}(audio)"
