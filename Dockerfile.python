@@ -18,6 +18,3 @@ COPY . .
 
 # Expose the Python service port
 EXPOSE 8000
-
-# Start the Django server
-CMD ["python", "Site/manage.py", "runserver", "127.0.0.1:8000"]
