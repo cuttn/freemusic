@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-2yee^flf$it+v#pbeyhgvfw%#5!#__q4*&8url1j29om=!m&6-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["freeemuusic.onrender.com", "127.0.0.1", "0.0.0.0", "localhost"]
+ALLOWED_HOSTS = ["freeemuusic.onrender.com", "127.0.0.1", "0.0.0.0", "localhost", "104.131.189.224"]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
