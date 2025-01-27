@@ -1,0 +1,4 @@
+"It is possible to commit no mistakes and still lose. That is not a weakness; that is life." - Captain Jean-Luc Picard
+so after doing some more research on why this project was able to run on local docker containers with the exact same config but failed on the server
+i came across a reddit thread that basically said that youtube purged the hell out of digital ocean ips. honestly this was supposed to be a cute little project
+its not worth my sanity. if you spin up a server with a clean ip you can just git clone this and run docker compose up --build -d and start praying. until then it was a learning experience and god knew something i didnt about this project honestly. rest in peace to free music you would have loved having a public ip and maybe even a domain name but alas, life is life and i got way better at full stack and devops through this. im actually going to cry istg!!!!!
