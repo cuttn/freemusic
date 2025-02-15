@@ -7,7 +7,7 @@ bin
 include
 lib
 *.cache 
-pycache
-*.pyc
+**/__pycache__/
+**/*.pyc
 *.sqlite3
 music

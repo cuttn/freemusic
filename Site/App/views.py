@@ -92,10 +92,9 @@ class AsyncSpotify:
 
     async def get_all_recently_played(self):
         items = []
-        while True:
-            result = await self.current_user_recently_played(limit=50, after=len(items))
-            if not result['items']:
-                break
+        # Get initial batch of recently played tracks
+        result = await self.current_user_recently_played(limit=50)
+        if result['items']:
             items.extend(result['items'])
         return items
     
@@ -113,7 +112,7 @@ def login(request):
 
 # Create your views here.
 def landing(request):
-    spauth = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], scope="playlist-read-private user-top-read user-library-read")
+    spauth = SpotifyOAuth(client_id=request.session["TOKEN"]["id"], client_secret=request.session["TOKEN"]["secret"], scope="playlist-read-private user-top-read user-library-read user-read-recently-played")
     destination = spauth.get_authorize_url()
     return HttpResponseRedirect(destination)
 # def landing(request):
@@ -252,7 +251,7 @@ async def download(request, reqType, ids):
                 "yt-dlp",
                 "-o", output_path,
                 "-x",
-                "--extractor-args", "youtube:getpot_bgutil_baseurl=http://freemusic-js-service-1:4416",
+                "--extractor-args", "youtube:getpot_bgutil_baseurl=http://localhost:4416",
                 "--audio-format", "mp3",
                 "--audio-quality", "1",
                 f"ytsearch:{item['search']}(audio)"

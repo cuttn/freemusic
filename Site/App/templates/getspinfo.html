@@ -1,22 +1,53 @@
 <!DOCTYPE html>
 <html>
-<body>
-<form action="" method="post">
-    {{ form }}
-    <input type="submit" value="Submit">
-    <h2>ok so lock in there are some quirks to this site:</h2>
-    <br>
-    <ul>
-        <li>firstly you must have a tab with youtube open and signed into on the same browser - this lets the site go sneaky mode</li>
-        <li>also to download multiple things, duplicate the download in a new tab my async is shit on this old ass project so its better to do this to run in parralell - async on the way tho dw</li>
-        <li>also be patient especially if you have a large spotify library my shit is extremely robust but very slow</li>
-    </ul>
-    <h2>ok and most importantly go to</h2><a href="https://developer.spotify.com/">the spotify dev site</a> <h2>and sign in with your normal spotify, then go to dashboard and create a new app</h2>
-    <br>
-    <h2>after you did this in the redirect uri put this site but with /App/spotify_callback appended to it nothing else matters</h2>
-    <br>
-    <h2>after you do this you should see a client id and client secret (click view client secret)</h2>
-    <h1>have fun!!!!!</h1>
-</form>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #ff66cc, #ffb3e6);
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="max-w-2xl mx-auto bg-white/95 backdrop-blur-sm p-8 rounded-lg shadow-xl border-2 border-[#ff66cc]">
+        <h1 class="text-4xl font-bold mb-6 text-[#ff66cc]">🎀 Spotify Setup 🎀</h1>
+        
+        <form action="" method="post" class="mb-8">
+            <div class="space-y-4">
+                {{ form }}
+                <button type="submit" class="w-full bg-[#ff66cc] hover:bg-[#1eb4ff] text-white px-6 py-3 rounded-full font-bold transition-all transform hover:scale-105 shadow-md">
+                    ✨ Connect Spotify
+                </button>
+            </div>
+        </form>
+
+        <div class="space-y-6">
+            <div class="bg-pink-50 p-6 rounded-lg border-2 border-[#1eb4ff]">
+                <h2 class="text-2xl font-bold mb-4 text-[#ff66cc]">🎀 Setup Steps</h2>
+                <ol class="list-decimal list-inside space-y-3 text-gray-800">
+                    <li>Sign in to <a href="https://developer.spotify.com/" class="text-[#ff66cc] hover:text-[#1eb4ff] font-bold">Spotify Developer Dashboard</a></li>
+                    <li>Create a new application</li>
+                    <li>Add this Redirect URI:
+                        <div class="bg-white p-3 mt-2 rounded-lg font-mono text-sm border-2 border-[#ff66cc] text-[#ff66cc]">
+                            [Your Site URL]/App/spotify_callback
+                        </div>
+                    </li>
+                    <li>Copy the Client ID and Secret</li>
+                </ol>
+            </div>
+
+            <div class="bg-pink-50 p-6 rounded-lg border-2 border-[#ff66cc]">
+                <h2 class="text-2xl font-bold mb-4 text-[#ff66cc]">✨ Pro Tips</h2>
+                <ul class="list-disc list-inside space-y-3 text-gray-800">
+                    <li>Keep YouTube signed in</li>
+                    <li>Open downloads in new tabs</li>
+                    <li>Big libraries = More time</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

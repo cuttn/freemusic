@@ -29,8 +29,6 @@ ALLOWED_HOSTS = ["freeemuusic.onrender.com", "127.0.0.1", "0.0.0.0", "localhost"
 
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
-# Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
