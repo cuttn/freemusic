@@ -2,7 +2,7 @@
 FROM node:18-slim
 
 # Install system dependencies (if needed)
-RUN apt-get update && apt-get install -y git ffmpeg && apt-get clean
+RUN apt-get update && apt-get install -y git && apt-get clean
 
 # Clone the repository
 RUN git clone --single-branch --branch 0.7.2 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git
