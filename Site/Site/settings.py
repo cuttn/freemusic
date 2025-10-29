@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-2yee^flf$it+v#pbeyhgvfw%#5!#__q4*&8url1j29om=!m&6-'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ["freeemuusic.onrender.com", "127.0.0.1", "0.0.0.0", "localhost", "104.131.189.224", "104.248.1.60"]
+ALLOWED_HOSTS = ['*'] if DEBUG else ["freeemuusic.onrender.com", "127.0.0.1", "0.0.0.0", "localhost"]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.file"
 
@@ -116,6 +116,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

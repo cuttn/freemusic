@@ -1,16 +1,4 @@
-version: '3.9'
 services:
-  js-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.node
-    ports:
-      - "4416:4416"
-    volumes:
-      - .:/app
-    working_dir: /bgutil-ytdlp-pot-provider/server
-    command: ["node", "build/main.js", "--port", "4416"]
-
   python-service:
     build:
       context: .
