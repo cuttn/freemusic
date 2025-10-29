@@ -125,5 +125,3 @@ You'll need to create your own Spotify API key. If you have a large music collec
 ## �📝 Note
 
 This is a tool for personal use. Please respect artists and support them by using official platforms whenever possible.
-
-````
