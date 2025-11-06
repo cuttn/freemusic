@@ -1,17 +1,17 @@
-# 🎵 Spotify-DL: Your Music, Your Way
+# Freemusic!!! - spotify localizer developer project
 
 A little wrapper around yt-dlp that integrates with the Spotify API, letting you manage your music library through a cute web interface. You can download all your playlists, songs, albums, recently played, top artists and more!!
 
-## ✨ Features
+## Features
 
 - Sign in with your Spotify account using OAuth2
-- Download your entire library, playlists, or specific albums
-- Clean, simple web interface
-- Powered by yt-dlp under the hood
+- Download your entire library, playlists, or specific albums concurrently
+- Clean, simple web interface with tailwind + django
+- Powered by yt-dlp and uses spotify metadata for accurate tagging and album covers
 
-## 🚀 Getting Started
+## How to install:
 
-### Option 1: Docker (Recommended)
+### Docker (very easy)
 
 The easiest way to get up and running:
 
@@ -21,14 +21,15 @@ docker compose up --build -d
 
 Then just head to `http://localhost:8000` and you're good to go!
 
-### Option 2: Local Setup
+### Option 2: Local Setup (super hairy)
 
 If you prefer running things locally:
+0. **You must have ffmpeg installed on your machine - https://www.ffmpeg.org/**
 
 1. Create a virtual environment:
    ```bash
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   source venv/bin/activate  # On Windows: scripts/activate.ps1
    ```
 
 2. Install dependencies:
@@ -37,93 +38,29 @@ If you prefer running things locally:
    ```
 3. Set up your environment:
    ```
-   python IMPORTANTSETUP.py
+   export SPOTIPY_REDIRECT_URI='http://localhost:8000/App/spotify_callback'
+   export DJANGO_SETTINGS_MODULE='Site.settings'
    ```
 4. Fire it up:
    ```bash
-   django-admin runserver
+   cd Site
+   python manage.py runserver
    ```
 
-## 🔑 API Setup
+## How it works:
 
-You'll need to create your own Spotify API key. If you have a large music collection, the setup process is well worth the effort! This tool was created to help music lovers have more control over their personal libraries.
+1. the user generates a spotify devloper client id and secret
+   - note that these creds grant access to one spotify account at first - the user's
+2. the site uses these creds to authorize the users account using spotify auth flow and a callback url to get a token
+3. this token is used to go through the users music library and generate dynamic django with download links for all their songs, albums etc.
+4. when the user wants to download a song or playlist, it is excecuted as a concurrent thread on the server inside of a new tab
+   - it gathers the metadata and creates an optimal youtube search with keywords such as the name and artist
+   - it then queries youtube and downloads the video of the song
+   - it then uses ffmpeg to convert the file to mp3 and tags it with eyed3
+   - then it serves it as a zipfile back to the user
+5. after the http response is returned, I use a finally block for garbage collection!!!
 
-*(Website coming soon! Keep an eye on this space for updates.)*
+## next steps:
 
-
-
-## � Technical Deep Dive
-
-### Architecture and Technical Challenges
-
-#### Asynchronous Processing Architecture
-- Implemented cutting-edge async/await patterns in Django using `asgiref.sync_to_async` for high-performance concurrent operations
-- Developed custom `AsyncSpotify` wrapper class to handle parallel API requests efficiently
-- Engineered concurrent download system with intelligent chunking to prevent system overload
-- Leveraged `asyncio.gather()` for optimal parallel execution of multiple downloads
-
-#### API Integration and Data Flow
-- Seamlessly integrated Spotify Web API with OAuth2 authentication flow
-- Implemented sophisticated paginated data fetching with cursor-based pagination
-- Built enterprise-grade error handling for API rate limits and connection issues
-- Architected efficient caching mechanisms for API responses
-
-#### Performance Optimizations
-- Engineered chunked processing for large playlist downloads with dynamic chunk sizing
-- Implemented async generators for memory-efficient stream processing
-- Designed robust cleanup mechanisms using context managers and `finally` blocks
-- Created automatic resource management system for temporary files and ZIP archives
-
-#### Database Architecture
-- Designed scalable Django models with efficient querying patterns
-- Implemented advanced indexing strategies for optimized search performance
-- Created robust data integrity checks and constraints
-- Utilized Django's ORM for type-safe database operations
-
-#### Security Implementations
-- Engineered secure OAuth token management with session-based storage
-- Implemented comprehensive CSRF protection
-- Developed thorough input sanitization for file paths and names
-- Created secure file operation handlers with proper permission management
-
-#### Media Processing Pipeline
-- Integrated yt-dlp with custom async wrapper for reliable media downloading
-- Engineered concurrent media processing with asyncio for optimal performance
-- Implemented automatic metadata tagging system for downloaded files
-- Developed efficient ZIP compression for bulk downloads
-
-### Technical Stack Highlights
-
-#### Backend Technologies
-- Django (Async Views)
-- Python AsyncIO
-- Spotipy (Spotify API Client)
-- yt-dlp Integration
-
-#### Infrastructure
-- Asynchronous Server Gateway Interface (ASGI)
-- Session Management System
-- Concurrent File System Operations
-- Memory-Optimized Processing
-
-#### External Services Integration
-- Spotify Web API
-- YouTube Data API (via yt-dlp)
-- OAuth2 Authentication Flow
-
-#### Development and Deployment
-- Docker Containerization
-- Development/Production Environment Management
-- Automated Cleanup Procedures
-
-### Notable Technical Achievements
-- Successfully engineered a concurrent download system that efficiently manages system resources
-- Implemented sophisticated memory management for handling large media files
-- Developed a robust error recovery system with automatic retry mechanisms
-- Created a scalable architecture capable of handling multiple concurrent users
-- Engineered efficient cleanup procedures for temporary files and sessions
-
-## �📝 Note
-
-This is a tool for personal use. Please respect artists and support them by using official platforms whenever possible.
+although I have better things to work on nowadays, next steps for this project would be having a more user-friendly loading screen. When users have extremely large libraries the site can take a while and doesn't inspire much confidence.
 
