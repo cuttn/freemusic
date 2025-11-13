@@ -38,7 +38,7 @@ If you prefer running things locally:
    ```
 3. Set up your environment:
    ```
-   export SPOTIPY_REDIRECT_URI='http://localhost:8000/App/spotify_callback'
+   export SPOTIPY_REDIRECT_URI='http://127.0.0.1:8000/App/spotify_callback'
    export DJANGO_SETTINGS_MODULE='Site.settings'
    ```
 4. Fire it up:
