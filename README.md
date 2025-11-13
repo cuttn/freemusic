@@ -19,7 +19,7 @@ The easiest way to get up and running:
 docker compose up --build -d
 ```
 
-Then just head to `http://localhost:8000` and you're good to go!
+Then just head to `http://127.0.0.1:8000` and you're good to go!
 
 ### Option 2: Local Setup (super hairy)
 
