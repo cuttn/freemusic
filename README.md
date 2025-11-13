@@ -20,6 +20,7 @@ docker compose up --build -d
 ```
 
 Then just head to `http://127.0.0.1:8000` and you're good to go!
+**note that due to the most recent spotify api changes localhost will not work; only the ip literal!
 
 ### Option 2: Local Setup (super hairy)
 
